@@ -116,6 +116,6 @@ int main() {
     while(true) {
         display_all_digits();
         increment_bcd();
-        sleep_ms(10);
+        sleep_ms(1);
     }
 }
