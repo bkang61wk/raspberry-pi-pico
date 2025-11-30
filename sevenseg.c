@@ -1,6 +1,8 @@
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "pico/cyw43_arch.h"
+#include "pico/multicore.h"
+
 #include <stdio.h>
 
 // Raspberry Pi Pico Pins
@@ -79,12 +81,22 @@ void increment_bcd() {
     }
 }
 
+void blink_led() {
+    if(cyw43_arch_init()) {
+        return;
+    }
+
+    while(true) {
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+        sleep_ms(500);
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+        sleep_ms(500);
+    }
+}
+
 int main() {
     stdio_init_all();
-
-    if(cyw43_arch_init()) {
-        return -1;
-    }
+    multicore_launch_core1(blink_led);
 
     // 1 MHz baudrate
     spi_init(spi0, 1000000);
@@ -104,9 +116,6 @@ int main() {
     while(true) {
         display_all_digits();
         increment_bcd();
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        sleep_ms(500);
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-        sleep_ms(500);
+        sleep_ms(10);
     }
 }

@@ -19,12 +19,11 @@ set(CMAKE_CXX_EXTENSIONS ON)
 # Generate compile_commands.json for VS Code IntelliSense
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
 # Initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 add_executable(sevenseg sevenseg.c)
 
-target_link_libraries(sevenseg pico_stdlib hardware_spi pico_cyw43_arch_none)
+target_link_libraries(sevenseg pico_stdlib hardware_spi pico_cyw43_arch_none pico_multicore)
 
 pico_add_extra_outputs(sevenseg)
