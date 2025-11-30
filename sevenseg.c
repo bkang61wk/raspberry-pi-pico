@@ -10,8 +10,9 @@
 
 #define NUM_BCD_DIGITS  20
 
-// Shift register (74HC595) pin 1-7 are used (Q_B - Q_H)
-// Pin 15 (Q_A) is unused. Pin 9 (Q_H') is serial data output for next digit
+// Shift register (74HC595) pin 1-7 are used (Q_B - Q_H).
+// Pin 15 (Q_A) is unused. Pin 9 (Q_H') is serial data output for next digit.
+// Clock and latch signals are shared among all daisy chained shift registers.
 //
 // Shift register => 7 segment
 // QB/1 => b/6
