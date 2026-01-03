@@ -2,6 +2,7 @@
 #include "hardware/spi.h"
 #include "pico/cyw43_arch.h"
 #include "pico/multicore.h"
+#include "hardware/gpio.h"
 
 #include <stdio.h>
 
@@ -9,6 +10,7 @@
 #define CLOCK_PIN       2   // GP2, SPI0 SCK
 #define DATA_PIN        3   // GP3, SPI0 TX
 #define LATCH_PIN       6   // GP6
+#define PPS_PIN         16  // GP16
 
 #define NUM_BCD_DIGITS  20
 
@@ -56,6 +58,14 @@ const uint8_t digit_map[10] = {
 
 uint8_t bcd_digits[NUM_BCD_DIGITS] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+volatile bool pps_flag = false;
+
+void pps_irq_handler(uint gpio, uint32_t events) {
+    if (gpio == PPS_PIN && (events & GPIO_IRQ_EDGE_RISE)) {
+        pps_flag = true;
+    }
+}
+
 void pulse_latch() {
     gpio_put(LATCH_PIN, 1);
     sleep_us(1);
@@ -64,7 +74,7 @@ void pulse_latch() {
 
 // Push the whole 20-digit frame, then latch once.
 void display_all_digits() {
-    for(int i=NUM_BCD_DIGITS-1; i>=0; i--) {
+    for (int i=NUM_BCD_DIGITS-1; i>=0; i--) {
         spi_write_blocking(spi0, &digit_map[bcd_digits[i]], 1);
     }
     pulse_latch();
@@ -82,15 +92,21 @@ void increment_bcd() {
 }
 
 void blink_led() {
-    if(cyw43_arch_init()) {
+    if (cyw43_arch_init()) {
         return;
     }
 
-    while(true) {
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        sleep_ms(500);
-        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-        sleep_ms(500);
+    // Replicate GPS module PPS LED behavior
+    // Stay on and blink by turning the LED off for 100 ms
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+
+    while (true) {
+        if (pps_flag) {
+            pps_flag = false;
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
+            sleep_ms(100);
+            cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+        }
     }
 }
 
@@ -113,7 +129,17 @@ int main() {
     gpio_set_dir(LATCH_PIN, GPIO_OUT);
     gpio_put(LATCH_PIN, 0); // Initialize to LOW
 
-    while(true) {
+    gpio_init(PPS_PIN);
+    gpio_set_dir(PPS_PIN, GPIO_IN);
+
+    gpio_set_irq_enabled_with_callback(
+        PPS_PIN,
+        GPIO_IRQ_EDGE_RISE,
+        true,
+        &pps_irq_handler
+    );
+
+    while (true) {
         display_all_digits();
         increment_bcd();
         sleep_ms(1);
