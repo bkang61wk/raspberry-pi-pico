@@ -3,6 +3,7 @@
 #include "pico/cyw43_arch.h"
 #include "pico/multicore.h"
 #include "hardware/gpio.h"
+#include "hardware/uart.h"
 
 #include <stdio.h>
 
@@ -11,6 +12,10 @@
 #define DATA_PIN        3   // GP3, SPI0 TX
 #define LATCH_PIN       6   // GP6
 #define PPS_PIN         16  // GP16
+#define GPS_TX_PIN      17  // GP17, GPS TX, Pico RX
+
+#define UART_ID         uart0
+#define BAUD_RATE       9600
 
 #define NUM_BCD_DIGITS  20
 
@@ -112,6 +117,11 @@ void blink_led() {
 
 int main() {
     stdio_init_all();
+
+    sleep_ms(2000);
+    printf("\nUSB CDC up. If you see this, /dev/ttyACM0 is working.\n");
+    fflush(stdout);
+
     multicore_launch_core1(blink_led);
 
     // 1 MHz baudrate
@@ -139,9 +149,17 @@ int main() {
         &pps_irq_handler
     );
 
+    uart_init(UART_ID, BAUD_RATE);
+    gpio_set_function(GPS_TX_PIN,  GPIO_FUNC_UART);
+
     while (true) {
         display_all_digits();
         increment_bcd();
+        
+        if (uart_is_readable(UART_ID)) {
+            putchar(uart_getc(UART_ID));
+        }
+
         sleep_ms(1);
     }
 }

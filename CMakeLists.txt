@@ -24,6 +24,9 @@ pico_sdk_init()
 
 add_executable(sevenseg sevenseg.c)
 
-target_link_libraries(sevenseg pico_stdlib hardware_spi pico_cyw43_arch_none pico_multicore)
+target_link_libraries(sevenseg pico_stdlib hardware_spi pico_cyw43_arch_none pico_multicore hardware_uart)
+
+pico_enable_stdio_usb(sevenseg 1)
+pico_enable_stdio_uart(sevenseg 0)
 
 pico_add_extra_outputs(sevenseg)
